@@ -20,7 +20,7 @@ use byteorder::{BigEndian, ReadBytesExt};
 use hidapi::{DeviceInfo, HidApi, HidDevice};
 use log::info;
 
-use std::{io::Cursor, ops::Deref, sync::Mutex};
+use std::{io::Cursor, ops::Deref, sync::Mutex, ffi::CStr};
 
 pub use hidapi;
 use ledger_transport::{async_trait, APDUAnswer, APDUCommand, Exchange};
@@ -68,6 +68,17 @@ impl TransportNativeHID {
     /// see [issue](https://github.com/ruabmbua/hidapi-rs/issues/81)
     pub fn open_device(api: &HidApi, device: &DeviceInfo) -> Result<Self, LedgerHIDError> {
         let device = device.open_device(api)?;
+        let _ = device.set_blocking_mode(true);
+
+        let ledger = TransportNativeHID {
+            device: Mutex::new(device),
+        };
+
+        Ok(ledger)
+    }
+
+    pub fn open_path(api: &HidApi, path: &CStr) -> Result<Self, LedgerHIDError> {
+        let device = api.open_path(path)?;
         let _ = device.set_blocking_mode(true);
 
         let ledger = TransportNativeHID {
